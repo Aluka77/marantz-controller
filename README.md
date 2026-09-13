@@ -47,7 +47,17 @@ open an issue with the model name and what did or did not work.
 3. The receiver accepts **only one telnet client at a time** (TCP port 23). Close
    other tools that use it while the app is connected.
 
-## Build and run
+## Download
+
+Grab **`MarantzController-…-win-x64.exe`** from the
+[latest release](https://github.com/Aluka77/marantz-controller/releases/latest) —
+a single file, nothing to install. Windows 10/11, 64-bit.
+
+The exe is not code-signed, so on first start SmartScreen may show
+*"Windows protected your PC"*: click **More info → Run anyway**.
+Every release is built from this repository's source by GitHub Actions.
+
+## Build from source
 
 Requirements: Windows 10/11 and the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
