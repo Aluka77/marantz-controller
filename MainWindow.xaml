@@ -1,0 +1,626 @@
+<Window x:Class="MarantzController.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:MarantzController"
+        Title="Marantz SR5015 Controller" Height="900" Width="820"
+        MinHeight="220" MinWidth="620"
+        Topmost="{Binding IsAlwaysOnTop}"
+        WindowStyle="None"
+        Background="{StaticResource WindowBg}">
+
+    <!-- Saját címsor + átméretezhető keret natív chrome nélkül -->
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="6"
+                      GlassFrameThickness="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Window.DataContext>
+        <local:MainViewModel />
+    </Window.DataContext>
+
+    <Grid>
+        <!-- Szálcsiszolt hairline-réteg a háttéren -->
+        <Border Background="{StaticResource HairlineTile}" IsHitTestVisible="False" />
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- ================= CÍMSOR (teljes nézet) ================= -->
+            <Grid Grid.Row="0" x:Name="TitleBar" Height="42" Background="Transparent"
+                  MouseLeftButtonDown="TitleBar_MouseLeftButtonDown"
+                  Visibility="{Binding IsCompact, Converter={StaticResource InvBoolVis}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                    <TextBlock Text="marantz" FontFamily="Georgia" FontStyle="Italic" FontWeight="Bold"
+                               FontSize="17" Foreground="{StaticResource Gold}" VerticalAlignment="Center" />
+                    <TextBlock Text="AVR Controller" FontSize="11.5" Foreground="{StaticResource TextDim}"
+                               VerticalAlignment="Center" Margin="7,3,0,0" />
+                </StackPanel>
+
+                <!-- A státusz a RUGALMAS oszlopban van és levágódik. Korábban az Auto
+                     szélességű oszlopban volt, így egy hosszú hibaüzenet kitolta a
+                     jobb oldali gombokat a képernyőről (nem lehetett újracsatlakozni). -->
+                <TextBlock Grid.Column="1" Text="{Binding StatusText}" FontSize="10.5"
+                           Foreground="{StaticResource TextDim}" VerticalAlignment="Center"
+                           Margin="14,2,10,0" TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding StatusText}" />
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
+                    <TextBox Width="110" Text="{Binding IpAddress, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="11.5" VerticalAlignment="Center" />
+                    <!-- Vevőkeresés (SSDP) – csak lekapcsolt állapotban aktív -->
+                    <Button x:Name="FindButton" Style="{StaticResource TitleBarButton}" FontFamily="{StaticResource IconFont}"
+                            Content="&#xE721;" Command="{Binding FindReceiversCommand}"
+                            ToolTip="Find receivers on the network" AutomationProperties.Name="Find receivers" />
+                    <Popup IsOpen="{Binding IsDiscoveryOpen, Mode=TwoWay}" PlacementTarget="{Binding ElementName=FindButton}"
+                           Placement="Bottom" StaysOpen="False" AllowsTransparency="True"
+                           HorizontalOffset="-200" VerticalOffset="4">
+                        <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource PillStroke}"
+                                BorderThickness="1" CornerRadius="10" Padding="6" Width="260">
+                            <ItemsControl ItemsSource="{Binding DiscoveredReceivers}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{Binding Display}" FontSize="11"
+                                                HorizontalContentAlignment="Left" Padding="8,5" Margin="0,1"
+                                                Background="Transparent" BorderThickness="0"
+                                                Command="{Binding DataContext.UseReceiverCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+                    </Popup>
+                    <Ellipse Width="9" Height="9" Margin="8,0,6,0" VerticalAlignment="Center"
+                             Fill="{Binding IsConnected, Converter={StaticResource ConnDot}}" />
+                    <Button Content="{Binding ConnectButtonText}" Command="{Binding ConnectCommand}"
+                            FontSize="11" Padding="10,4" Margin="0,0,8,0" />
+                    <Button Style="{StaticResource TitleBarButton}" FontFamily="{StaticResource IconFont}"
+                            Content="&#xE713;" Command="{Binding OpenSettingsCommand}"
+                            ToolTip="Settings (speakers, surround, system)" />
+                    <ToggleButton Style="{StaticResource PinToggle}" Content="&#xE718;"
+                                  IsChecked="{Binding IsAlwaysOnTop}" ToolTip="Always on top" />
+                    <Button Style="{StaticResource TitleBarButton}" FontFamily="{StaticResource IconFont}"
+                            Content="&#xE73F;" Command="{Binding ToggleCompactCommand}" ToolTip="Mini view"
+                            AutomationProperties.Name="Mini view" />
+                    <Button Style="{StaticResource TitleBarButton}" Content="–" FontSize="15"
+                            Click="Minimize_Click" ToolTip="Minimise" />
+                    <Button Style="{StaticResource TitleBarButton}" Content="✕"
+                            Click="Close_Click" ToolTip="Close" />
+                </StackPanel>
+            </Grid>
+
+            <!-- ================= TELJES NÉZET ================= -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                          Visibility="{Binding IsCompact, Converter={StaticResource InvBoolVis}}">
+                <StackPanel Margin="14,4,14,14">
+
+                    <!-- HERO: now playing + hangerő-knob -->
+                    <Border Background="{StaticResource HeroBg}" BorderBrush="{StaticResource CardStroke}"
+                            BorderThickness="1" CornerRadius="12" Padding="14" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Borító / forrás-ikon -->
+                            <Border Grid.Column="0" Width="96" Height="96" CornerRadius="8"
+                                    Background="{StaticResource InnerBg}" VerticalAlignment="Center"
+                                    Margin="0,0,14,0" ClipToBounds="True">
+                                <Grid>
+                                    <TextBlock Text="{Binding CurrentSourceToken, Converter={StaticResource TokenGlyph}}"
+                                               FontFamily="{StaticResource IconFont}" FontSize="34"
+                                               Foreground="{StaticResource GoldDim}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Visibility="{Binding HasAlbumArt, Converter={StaticResource InvBoolVis}}" />
+                                    <Image Source="{Binding NowPlayingImage}" Stretch="UniformToFill"
+                                           Visibility="{Binding HasAlbumArt, Converter={StaticResource BoolVis}}" />
+                                </Grid>
+                            </Border>
+
+                            <!-- Infó + transport -->
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding CurrentSource}" FontSize="11"
+                                           Foreground="{StaticResource Gold}" Margin="1,0,0,1" />
+                                <TextBlock Text="{Binding NowPlayingTitle}" FontSize="15.5" FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"
+                                           Visibility="{Binding IsNowPlayingVisible, Converter={StaticResource BoolVis}}" />
+                                <TextBlock Text="{Binding NowPlayingArtist}" FontSize="12.5"
+                                           Foreground="{StaticResource TextSec}" TextTrimming="CharacterEllipsis"
+                                           Visibility="{Binding IsNowPlayingVisible, Converter={StaticResource BoolVis}}" />
+                                <TextBlock Text="{Binding SoundModeDisplay}" FontSize="11"
+                                           Foreground="{StaticResource TextSec}" Margin="1,3,0,0" />
+                                <TextBlock Text="{Binding SignalInfo}" FontSize="10"
+                                           Foreground="{StaticResource TextDim}" Margin="1,1,0,0"
+                                           Visibility="{Binding HasSignalInfo, Converter={StaticResource BoolVis}}" />
+                                <TextBlock Text="{Binding StandbyCountdownDisplay}" FontSize="10.5"
+                                           Foreground="#E08A8A" Margin="1,1,0,0"
+                                           Visibility="{Binding IsStandbyCountdownVisible, Converter={StaticResource BoolVis}}" />
+
+                                <!-- Pozíció-sáv (HEOS progress-eseményből, ~5 mp-enként frissül) -->
+                                <Grid Margin="1,7,4,0"
+                                      Visibility="{Binding HasProgress, Converter={StaticResource BoolVis}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding PositionText}" FontSize="9.5"
+                                               Foreground="{StaticResource TextDim}" VerticalAlignment="Center"
+                                               Margin="0,0,6,0" />
+                                    <Border x:Name="ProgTrack" Grid.Column="1" Height="3" CornerRadius="1.5"
+                                            Background="#2A2A30" VerticalAlignment="Center">
+                                        <Border Height="3" CornerRadius="1.5" Background="{StaticResource Gold}"
+                                                HorizontalAlignment="Left">
+                                            <Border.Width>
+                                                <MultiBinding Converter="{StaticResource FracWidth}">
+                                                    <Binding Path="ProgressFraction" />
+                                                    <Binding Path="ActualWidth" ElementName="ProgTrack" />
+                                                </MultiBinding>
+                                            </Border.Width>
+                                        </Border>
+                                    </Border>
+                                    <TextBlock Grid.Column="2" Text="{Binding DurationText}" FontSize="9.5"
+                                               Foreground="{StaticResource TextDim}" VerticalAlignment="Center"
+                                               Margin="6,0,0,0" />
+                                </Grid>
+
+                                <!-- Transport CSAK HEOS forrásnál: a HEOS player akkor is
+                                     jelenti a most szólót, ha a bemenet közben másra váltott. -->
+                                <StackPanel Orientation="Horizontal" Margin="0,7,0,0"
+                                            Visibility="{Binding IsHeosSource, Converter={StaticResource BoolVis}}">
+                                    <Button Style="{StaticResource TransportButton}" Content="&#xE892;"
+                                            Command="{Binding PrevTrackCommand}" ToolTip="Previous track" />
+                                    <Button Style="{StaticResource TransportMainButton}"
+                                            Content="{Binding IsPlaying, Converter={StaticResource PlayPauseGlyph}}"
+                                            Command="{Binding PlayPauseCommand}" ToolTip="Play / Pause" />
+                                    <Button Style="{StaticResource TransportButton}" Content="&#xE71A;"
+                                            Command="{Binding StopCommand}" ToolTip="Stop" />
+                                    <Button Style="{StaticResource TransportButton}" Content="&#xE893;"
+                                            Command="{Binding NextTrackCommand}" ToolTip="Next track" />
+
+                                    <Border Width="1" Background="{StaticResource CardStroke}" Margin="6,6" />
+
+                                    <Button Style="{StaticResource TransportToggleButton}" Content="&#xE8B1;"
+                                            Tag="{Binding IsShuffleActive}" Command="{Binding ToggleShuffleCommand}"
+                                            ToolTip="Shuffle" />
+                                    <Button Style="{StaticResource TransportToggleButton}"
+                                            Content="{Binding RepeatGlyph}" Tag="{Binding IsRepeatActive}"
+                                            Command="{Binding ToggleRepeatCommand}"
+                                            ToolTip="{Binding RepeatToolTip}" />
+
+                                    <!-- Lejátszási sor: a lista csak nyitáskor töltődik le -->
+                                    <Button x:Name="QueueButton" Style="{StaticResource TransportToggleButton}"
+                                            Content="&#xE8FD;" Tag="{Binding IsQueueOpen}"
+                                            Command="{Binding ToggleQueueCommand}" ToolTip="Play queue" />
+                                    <Popup IsOpen="{Binding IsQueueOpen, Mode=TwoWay}" PlacementTarget="{Binding ElementName=QueueButton}"
+                                           Placement="Bottom" StaysOpen="False" AllowsTransparency="True"
+                                           HorizontalOffset="-160" VerticalOffset="4">
+                                        <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource PillStroke}"
+                                                BorderThickness="1" CornerRadius="10" Padding="6" MaxHeight="320" Width="320">
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <ItemsControl ItemsSource="{Binding Queue}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="{Binding Display}" FontSize="11"
+                                                                    HorizontalContentAlignment="Left" Padding="8,5" Margin="0,1"
+                                                                    Background="Transparent" BorderThickness="0"
+                                                                    Command="{Binding DataContext.PlayQueueItemCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                    CommandParameter="{Binding}" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Border>
+                                    </Popup>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Knob + Vol gombok -->
+                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                <local:VolumeKnob x:Name="Knob"
+                                                  Value="{Binding VolumeSliderValue, Mode=TwoWay}"
+                                                  Maximum="{Binding VolumeSliderMax}"
+                                                  ValueText="{Binding VolumeDbText}"
+                                                  SubText="{Binding VolumeScaleLabel}" />
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
+                                    <Button Style="{StaticResource MuteIconButton}" Content="&#xE74F;"
+                                            Width="42" Height="42" FontSize="15" Margin="0,0,5,0"
+                                            ToolTip="Mute" />
+                                    <Button Style="{StaticResource VolPillButton}" Content="Vol −"
+                                            Command="{Binding VolumeDownCommand}" />
+                                    <Button Style="{StaticResource VolPillButton}" Content="Vol +"
+                                            Command="{Binding VolumeUpCommand}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- SOUND MODES | INPUT SOURCES -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,6,0" VerticalAlignment="Top">
+                            <ToggleButton Style="{StaticResource CardTab}"
+                                          IsChecked="{Binding IsSoundAndInputExpanded, Mode=TwoWay}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="SOUND MODES" FontSize="11" />
+                                    <TextBlock Text="{Binding SoundModeDisplay}" FontSize="10"
+                                               Foreground="{StaticResource GoldDeep}" Margin="8,0,0,0"
+                                               MaxWidth="110" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </ToggleButton>
+                            <Border Style="{StaticResource CardBody}"
+                                    Visibility="{Binding IsSoundAndInputExpanded, Converter={StaticResource BoolVis}}">
+                                <StackPanel>
+                                    <ItemsControl ItemsSource="{Binding SoundModeCategories}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Style="{StaticResource SoundModeCategoryButton}"
+                                                        Content="{Binding Label}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <Border Height="1" Background="{StaticResource CardStroke}" Margin="6,6" />
+                                    <ItemsControl ItemsSource="{Binding SoundModeDirect}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Style="{StaticResource SoundModeButton}"
+                                                        Content="{Binding Label}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Top">
+                            <ToggleButton Style="{StaticResource CardTab}" Content="INPUT SOURCES"
+                                          IsChecked="{Binding IsSoundAndInputExpanded, Mode=TwoWay}" />
+                            <Border Style="{StaticResource CardBody}"
+                                    Visibility="{Binding IsSoundAndInputExpanded, Converter={StaticResource BoolVis}}">
+                                <ItemsControl ItemsSource="{Binding Sources}" HorizontalAlignment="Center">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Style="{StaticResource SourceTile}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- HANGKÉP (Audyssey) | HANGSZÍN -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,6,0" VerticalAlignment="Top">
+                            <ToggleButton Style="{StaticResource CardTab}"
+                                          IsChecked="{Binding IsAudioParamsExpanded, Mode=TwoWay}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="SOUND" FontSize="11" />
+                                    <TextBlock Text="{Binding AudioParamsShort}" FontSize="10"
+                                               Foreground="{StaticResource Gold}" Margin="8,0,0,0"
+                                               VerticalAlignment="Center" MaxWidth="190"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </ToggleButton>
+                            <Border Style="{StaticResource CardBody}"
+                                    Visibility="{Binding IsAudioParamsExpanded, Converter={StaticResource BoolVis}}">
+                                <StackPanel>
+                                    <ItemsControl ItemsSource="{Binding AudysseyOptions}"
+                                                  ItemTemplate="{StaticResource AvOptionRow}" />
+                                    <TextBlock FontSize="9.5" TextWrapping="Wrap" Margin="2,6,0,0"
+                                               Foreground="{StaticResource TextDim}"
+                                               Text="The receiver stores these PER SOURCE — they may differ after switching input." />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Top">
+                            <ToggleButton Style="{StaticResource CardTab}" Content="TONE"
+                                          IsChecked="{Binding IsAudioParamsExpanded, Mode=TwoWay}" />
+                            <Border Style="{StaticResource CardBody}"
+                                    Visibility="{Binding IsAudioParamsExpanded, Converter={StaticResource BoolVis}}">
+                                <StackPanel>
+                                    <ItemsControl ItemsSource="{Binding ToneOptions}"
+                                                  ItemTemplate="{StaticResource AvOptionRow}" />
+                                    <ItemsControl ItemsSource="{Binding ToneLevels}"
+                                                  ItemTemplate="{StaticResource AvLevelRow}" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- POWER & QUICK SELECT | SLEEP & STANDBY -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,6,0" VerticalAlignment="Top">
+                            <ToggleButton Style="{StaticResource CardTab}" Content="POWER &amp; QUICK SELECT"
+                                          IsChecked="{Binding IsPowerAndTimersExpanded, Mode=TwoWay}" />
+                            <Border Style="{StaticResource CardBody}"
+                                    Visibility="{Binding IsPowerAndTimersExpanded, Converter={StaticResource BoolVis}}">
+                                <StackPanel>
+                                    <UniformGrid Columns="2">
+                                        <Button Style="{StaticResource PowerOnButton}" Content="Power On" />
+                                        <Button Content="Power Off" Command="{Binding PowerOffCommand}" />
+                                    </UniformGrid>
+                                    <ItemsControl ItemsSource="{Binding QuickSelects}" Margin="0,4,0,0">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Style="{StaticResource QuickSelectButton}"
+                                                        Content="{Binding Name}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- HDMI kijelző-választás: a nézési „üzemmód" ide tartozik,
+                                         a bekapcsolás és a Quick Select mellé. -->
+                                    <Border Height="1" Background="{StaticResource CardStroke}" Margin="0,8,0,6" />
+                                    <ContentPresenter Content="{Binding DisplayOut}"
+                                                      ContentTemplate="{StaticResource AvOptionRow}" />
+                                    <TextBlock FontSize="9.5" TextWrapping="Wrap" Margin="2,4,0,0"
+                                               Foreground="{StaticResource TextDim}"
+                                               Text="Auto drives both outputs at once: the picture drops to their common denominator and the HDMI link keeps re-syncing (the projector blacks out every 20-30 s). Always pick one display for viewing." />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Top">
+                            <ToggleButton Style="{StaticResource CardTab}"
+                                          IsChecked="{Binding IsPowerAndTimersExpanded, Mode=TwoWay}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="TIMERS" FontSize="11" />
+                                    <TextBlock Text="{Binding TimersShort}" FontSize="10"
+                                               Foreground="{StaticResource Gold}" Margin="8,0,0,0"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                            </ToggleButton>
+                            <Border Style="{StaticResource CardBody}"
+                                    Visibility="{Binding IsPowerAndTimersExpanded, Converter={StaticResource BoolVis}}">
+                                <StackPanel>
+                                    <TextBlock Text="Sleep timer" FontSize="10.5"
+                                               Foreground="{StaticResource TextDim}" Margin="4,0,0,2" />
+                                    <UniformGrid Columns="5">
+                                        <Button Content="Off"  Command="{Binding SetSleepCommand}" CommandParameter="0"  FontSize="10.5" Padding="4,5" />
+                                        <Button Content="15m" Command="{Binding SetSleepCommand}" CommandParameter="15" FontSize="10.5" Padding="4,5" />
+                                        <Button Content="30m" Command="{Binding SetSleepCommand}" CommandParameter="30" FontSize="10.5" Padding="4,5" />
+                                        <Button Content="60m" Command="{Binding SetSleepCommand}" CommandParameter="60" FontSize="10.5" Padding="4,5" />
+                                        <Button Content="90m" Command="{Binding SetSleepCommand}" CommandParameter="90" FontSize="10.5" Padding="4,5" />
+                                    </UniformGrid>
+                                    <TextBlock Text="Auto standby (when idle)" FontSize="10.5"
+                                               Foreground="{StaticResource TextDim}" Margin="4,6,0,2" />
+                                    <UniformGrid Columns="4">
+                                        <Button Content="Off"  Command="{Binding SetStandbyCommand}" CommandParameter="OFF" FontSize="10.5" Padding="4,5" />
+                                        <Button Content="15m" Command="{Binding SetStandbyCommand}" CommandParameter="15" FontSize="10.5" Padding="4,5" />
+                                        <Button Content="30m" Command="{Binding SetStandbyCommand}" CommandParameter="30" FontSize="10.5" Padding="4,5" />
+                                        <Button Content="60m" Command="{Binding SetStandbyCommand}" CommandParameter="60" FontSize="10.5" Padding="4,5" />
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- AUDIO EQUALIZER (csatornaszintek) -->
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ToggleButton Grid.Column="0" Style="{StaticResource CardTab}" Content="AUDIO EQUALIZER"
+                                          IsChecked="{Binding IsChannelLevelsExpanded, Mode=TwoWay}" />
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom"
+                                        Margin="0,0,2,2">
+                                <Button Style="{StaticResource Preset1Button}" Content="Preset 1" CommandParameter="1"
+                                        ToolTip="Speaker preset 1" />
+                                <Button Style="{StaticResource Preset2Button}" Content="Preset 2" CommandParameter="2"
+                                        ToolTip="Speaker preset 2" />
+                            </StackPanel>
+                        </Grid>
+                        <Border Grid.Row="1" Style="{StaticResource CardBody}"
+                                Visibility="{Binding IsChannelLevelsExpanded, Converter={StaticResource BoolVis}}">
+                          <StackPanel>
+                            <!-- Mélyláda: ide tartozik, a csatornaszintek mellé -->
+                            <WrapPanel Margin="0,0,0,8">
+                                <ContentPresenter Content="{Binding SubwooferOn}"
+                                                  ContentTemplate="{StaticResource AvOptionRow}" Width="250" />
+                                <ContentPresenter Content="{Binding SubwooferLevel}"
+                                                  ContentTemplate="{StaticResource AvLevelRow}" Width="250" />
+                                <ContentPresenter Content="{Binding LfeLevel}"
+                                                  ContentTemplate="{StaticResource AvLevelRow}" Width="250" />
+                            </WrapPanel>
+                            <Border Height="1" Background="{StaticResource CardStroke}" Margin="0,0,0,8" />
+                            <Grid HorizontalAlignment="Center">
+                                <!-- Arany görbe a fader-fejek közt (code-behind frissíti) -->
+                                <Canvas x:Name="EqCanvas" IsHitTestVisible="False">
+                                    <Polyline x:Name="EqCurve" Stroke="#B3F0C87A" StrokeThickness="2"
+                                              StrokeLineJoin="Round" Effect="{StaticResource GoldGlowSoft}" />
+                                </Canvas>
+                                <ItemsControl x:Name="EqItems" ItemsSource="{Binding ChannelLevels}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Width="64" Margin="2,0">
+                                                <Border Background="{StaticResource InnerBg}"
+                                                        BorderBrush="{StaticResource PillStroke}" BorderThickness="1"
+                                                        CornerRadius="8" Padding="0,3" Margin="8,0">
+                                                    <TextBlock Text="{Binding DbText}" FontSize="10"
+                                                               Foreground="{StaticResource GoldPale}"
+                                                               HorizontalAlignment="Center" />
+                                                </Border>
+                                                <Slider Style="{StaticResource VFader}"
+                                                        Height="150" Margin="0,8,0,4" HorizontalAlignment="Center"
+                                                        Minimum="38" Maximum="62"
+                                                        Value="{Binding Value, Mode=TwoWay}"
+                                                        SmallChange="0.5" LargeChange="1" />
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                    <Button Style="{StaticResource NudgeButton}" Content="−"
+                                                            Command="{Binding DownCommand}" ToolTip="−0.5 dB" />
+                                                    <Button Style="{StaticResource NudgeButton}" Content="+"
+                                                            Command="{Binding UpCommand}" ToolTip="+0.5 dB"
+                                                            Margin="4,2,0,2" />
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontSize="10"
+                                                           Foreground="{StaticResource TextSec}"
+                                                           HorizontalAlignment="Center" Margin="0,2,0,0"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                          </StackPanel>
+                        </Border>
+                    </Grid>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ================= MINI NÉZET (üvegkártya) ================= -->
+            <Border Grid.Row="0" Grid.RowSpan="2" x:Name="MiniRoot" CornerRadius="14" ClipToBounds="True"
+                    Background="{StaticResource InnerBg}"
+                    MouseLeftButtonDown="MiniRoot_MouseLeftButtonDown"
+                    Visibility="{Binding IsCompact, Converter={StaticResource BoolVis}}">
+                <Grid>
+                    <!-- Elmosott borító-háttér + sötét fátyol.
+                         FONTOS: ImageBrush-ként (nem <Image> elemként) tesszük be – egy
+                         Image a borító NATÍV pixelméretét kérné a layoutban, és felnyomná
+                         az ablak magasságát (mérve: 2182 px!). A Background-brush nem
+                         befolyásolja a méretezést. -->
+                    <Border Visibility="{Binding HasAlbumArt, Converter={StaticResource BoolVis}}">
+                        <Border.Background>
+                            <ImageBrush ImageSource="{Binding NowPlayingImage}" Stretch="UniformToFill" />
+                        </Border.Background>
+                        <Border.Effect>
+                            <!-- Csak annyi elmosás, hogy a szöveg olvasható legyen,
+                                 de a borító felismerhető maradjon. -->
+                            <BlurEffect Radius="4" KernelType="Gaussian" />
+                        </Border.Effect>
+                    </Border>
+                    <Border Background="#A6101014" />
+
+                    <StackPanel Margin="16,12,16,14">
+                        <!-- Fejléc: futó cím + pin + teljes nézet -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid Grid.Column="0" VerticalAlignment="Center">
+                                <local:Marquee Text="{Binding NowPlayingDisplay}" Height="18"
+                                               TextElement.FontSize="12.5" TextElement.Foreground="#FFE2B0"
+                                               Visibility="{Binding IsNowPlayingVisible, Converter={StaticResource BoolVis}}" />
+                                <TextBlock Text="{Binding CurrentSource}" FontSize="12.5"
+                                           Foreground="{StaticResource GoldPale}" HorizontalAlignment="Center"
+                                           Visibility="{Binding IsNowPlayingVisible, Converter={StaticResource InvBoolVis}}" />
+                            </Grid>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <ToggleButton Style="{StaticResource PinToggle}" Content="&#xE718;"
+                                              IsChecked="{Binding IsAlwaysOnTop}" ToolTip="Always on top" />
+                                <Button Style="{StaticResource TitleBarButton}" FontFamily="{StaticResource IconFont}"
+                                        Content="&#xE740;" Command="{Binding ToggleCompactCommand}"
+                                        ToolTip="Full view" AutomationProperties.Name="Full view" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Forrás · hangzásmód. A forrásnév itt CSAK akkor kell, ha a
+                             fejlécben a szám címe fut – különben ott már a forrás áll. -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
+                            <StackPanel Orientation="Horizontal"
+                                        Visibility="{Binding IsNowPlayingVisible, Converter={StaticResource BoolVis}}">
+                                <TextBlock Text="{Binding CurrentSource}" FontSize="10.5" Foreground="{StaticResource TextSec}" />
+                                <TextBlock Text=" · " FontSize="10.5" Foreground="{StaticResource TextDim}" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding SoundModeDisplay}" FontSize="10.5" Foreground="{StaticResource TextSec}" />
+                        </StackPanel>
+
+                        <!-- Nagy arany hangerő -->
+                        <TextBlock Text="{Binding VolumeDbText}" FontSize="42" FontWeight="Light"
+                                   Foreground="{StaticResource Gold}" HorizontalAlignment="Center" Margin="0,2,0,0">
+                            <TextBlock.Effect>
+                                <DropShadowEffect Color="#F0C87A" BlurRadius="26" ShadowDepth="0" Opacity="0.4" />
+                            </TextBlock.Effect>
+                        </TextBlock>
+                        <TextBlock Text="{Binding StandbyCountdownDisplay}" FontSize="10.5" Foreground="#E08A8A"
+                                   HorizontalAlignment="Center" Margin="0,1,0,0"
+                                   Visibility="{Binding IsStandbyCountdownVisible, Converter={StaticResource BoolVis}}" />
+
+                        <!-- Transport (csak HEOS forrásnál) + Mute (mindig) -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0">
+                            <StackPanel Orientation="Horizontal"
+                                        Visibility="{Binding IsHeosSource, Converter={StaticResource BoolVis}}">
+                                <Button Style="{StaticResource TransportButton}" Content="&#xE892;"
+                                        Command="{Binding PrevTrackCommand}" ToolTip="Previous track" />
+                                <Button Style="{StaticResource TransportMainButton}"
+                                        Content="{Binding IsPlaying, Converter={StaticResource PlayPauseGlyph}}"
+                                        Command="{Binding PlayPauseCommand}" ToolTip="Play / Pause" />
+                                <Button Style="{StaticResource TransportButton}" Content="&#xE893;"
+                                        Command="{Binding NextTrackCommand}" ToolTip="Next track" />
+                            </StackPanel>
+                            <Button Style="{StaticResource MuteIconButton}" Content="&#xE74F;"
+                                    Width="40" Height="40" FontSize="15" Margin="10,0,0,0" ToolTip="Mute" />
+                        </StackPanel>
+
+                        <!-- Hangerő-sáv -->
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="Vol −" Command="{Binding VolumeDownCommand}"
+                                    FontSize="10.5" Padding="10,5" />
+                            <Slider x:Name="VolumeSliderCompact" Grid.Column="1" Style="{StaticResource KnobSlider}"
+                                    VerticalAlignment="Center" Margin="4,0"
+                                    Minimum="0" Maximum="{Binding VolumeSliderMax}"
+                                    Value="{Binding VolumeSliderValue, Mode=TwoWay}"
+                                    SmallChange="0.5" LargeChange="5" />
+                            <Button Grid.Column="2" Content="Vol +" Command="{Binding VolumeUpCommand}"
+                                    FontSize="10.5" Padding="10,5" />
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
+

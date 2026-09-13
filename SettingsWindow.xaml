@@ -1,0 +1,120 @@
+<Window x:Class="MarantzController.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Marantz — Settings" Height="640" Width="660"
+        MinHeight="360" MinWidth="560"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        Background="{StaticResource WindowBg}">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="6"
+                      GlassFrameThickness="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Grid>
+        <Border Background="{StaticResource HairlineTile}" IsHitTestVisible="False" />
+
+        <Grid Margin="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Címsor -->
+            <Grid Grid.Row="0" Height="40" Background="Transparent"
+                  MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <TextBlock Text="Settings" FontFamily="Georgia" FontStyle="Italic" FontWeight="Bold"
+                           FontSize="15" Foreground="{StaticResource Gold}"
+                           VerticalAlignment="Center" Margin="16,0,0,0" />
+                <Button Style="{StaticResource TitleBarButton}" Content="✕" Click="Close_Click"
+                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"
+                        ToolTip="Close" />
+            </Grid>
+
+            <TextBlock Grid.Row="1" Margin="16,0,16,8" FontSize="10.5" TextWrapping="Wrap"
+                       Foreground="{StaticResource TextDim}"
+                       Text="Live values from the receiver. Anything unavailable for the current source or sound mode is hidden." />
+
+            <TabControl Grid.Row="2" Style="{StaticResource SettingsTabs}" Margin="14,0,14,14">
+
+                <!-- ==================== HANGSZÓRÓK ==================== -->
+                <TabItem Header="Speakers" Style="{StaticResource SettingsTab}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="2,4,8,4">
+
+                            <TextBlock Style="{StaticResource SettingsGroupTitle}" Text="SPEAKER PRESET" />
+                            <StackPanel Orientation="Horizontal">
+                                <Button Style="{StaticResource Preset1Button}" Content="Preset 1" />
+                                <Button Style="{StaticResource Preset2Button}" Content="Preset 2" />
+                            </StackPanel>
+                            <TextBlock FontSize="10" TextWrapping="Wrap" Margin="4,4,0,0"
+                                       Foreground="{StaticResource TextDim}"
+                                       Text="A preset stores speaker sizes, crossovers, subwoofer mode and distances — not just the levels." />
+
+                            <TextBlock Style="{StaticResource SettingsGroupTitle}" Text="SIZE AND SUBWOOFER" />
+                            <ItemsControl ItemsSource="{Binding SpeakerOptions}"
+                                          ItemTemplate="{StaticResource AvOptionRow}" />
+                            <TextBlock FontSize="10" TextWrapping="Wrap" Margin="4,4,0,0"
+                                       Foreground="{StaticResource TextDim}"
+                                       Text="With Large fronts and &#x201C;LFE only&#x201D; the subwoofer is nearly silent on stereo music — &#x201C;LFE + Main&#x201D; is the right choice there." />
+
+                            <TextBlock Style="{StaticResource SettingsGroupTitle}" Text="CROSSOVER" />
+                            <ItemsControl ItemsSource="{Binding CrossoverOptions}"
+                                          ItemTemplate="{StaticResource AvOptionRow}" />
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- ==================== SURROUND ==================== -->
+                <TabItem Header="Surround" Style="{StaticResource SettingsTab}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="2,4,8,4">
+                            <TextBlock Style="{StaticResource SettingsGroupTitle}" Text="SURROUND PARAMETERS" />
+                            <ItemsControl ItemsSource="{Binding SurroundOptions}"
+                                          ItemTemplate="{StaticResource AvOptionRow}" />
+                            <ItemsControl ItemsSource="{Binding SurroundLevels}"
+                                          ItemTemplate="{StaticResource AvLevelRow}" Margin="0,4,0,0" />
+                            <TextBlock FontSize="10" TextWrapping="Wrap" Margin="4,8,0,0"
+                                       Foreground="{StaticResource TextDim}"
+                                       Text="Most of these depend on the sound mode — unavailable ones disappear from the list." />
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- ==================== RENDSZER ==================== -->
+                <TabItem Header="System" Style="{StaticResource SettingsTab}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="2,4,8,4">
+                            <TextBlock Style="{StaticResource SettingsGroupTitle}" Text="VOLUME AND POWER" />
+                            <ItemsControl ItemsSource="{Binding SystemOptions}"
+                                          ItemTemplate="{StaticResource AvOptionRow}" />
+                            <TextBlock FontSize="10" TextWrapping="Wrap" Margin="4,4,0,0"
+                                       Foreground="{StaticResource TextDim}"
+                                       Text="The volume limit caps how loud it can go — protection against an accidental blast." />
+
+                            <TextBlock Style="{StaticResource SettingsGroupTitle}" Text="INCOMING SIGNAL" />
+                            <TextBlock Text="{Binding SignalInfo}" FontSize="12"
+                                       Foreground="{StaticResource Gold}" Margin="4,0,0,0" />
+
+                            <TextBlock Style="{StaticResource SettingsGroupTitle}" Text="CONNECTION" />
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox Width="130" FontSize="11.5" VerticalAlignment="Center"
+                                         Text="{Binding IpAddress, UpdateSourceTrigger=PropertyChanged}" />
+                                <Ellipse Width="9" Height="9" Margin="10,0,8,0" VerticalAlignment="Center"
+                                         Fill="{Binding IsConnected, Converter={StaticResource ConnDot}}" />
+                                <Button Content="{Binding ConnectButtonText}" Command="{Binding ConnectCommand}"
+                                        FontSize="11" Padding="10,4" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding StatusText}" FontSize="10" TextWrapping="Wrap"
+                                       Foreground="{StaticResource TextDim}" Margin="4,6,0,0" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+            </TabControl>
+        </Grid>
+    </Grid>
+</Window>

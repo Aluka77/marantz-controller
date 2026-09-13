@@ -1,0 +1,730 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:MarantzController">
+
+    <!-- ======================= KONVERTEREK ======================= -->
+    <local:SourceEqualsConverter x:Key="SourceEquals" />
+    <local:ConnectionDotConverter x:Key="ConnDot" />
+    <local:InverseBoolToVisibilityConverter x:Key="InvBoolVis" />
+    <local:BoolToVisibilityConverter x:Key="BoolVis" />
+    <local:TokenToGlyphConverter x:Key="TokenGlyph" />
+    <local:BoolToPlayPauseGlyphConverter x:Key="PlayPauseGlyph" />
+    <local:FractionToWidthConverter x:Key="FracWidth" />
+
+    <!-- ======================= PALETTA ======================= -->
+    <Color x:Key="GoldColor">#F0C87A</Color>
+    <SolidColorBrush x:Key="Gold" Color="#F0C87A" />
+    <SolidColorBrush x:Key="GoldPale" Color="#FFE2B0" />
+    <SolidColorBrush x:Key="GoldDeep" Color="#C9A05C" />
+    <SolidColorBrush x:Key="GoldDim" Color="#8A6F45" />
+    <SolidColorBrush x:Key="TextPri" Color="#EFEFEF" />
+    <SolidColorBrush x:Key="TextSec" Color="#98989E" />
+    <SolidColorBrush x:Key="TextDim" Color="#6E6E74" />
+    <SolidColorBrush x:Key="CardStroke" Color="#2C2C31" />
+    <SolidColorBrush x:Key="PillBg" Color="#232327" />
+    <SolidColorBrush x:Key="PillStroke" Color="#3E3E45" />
+    <SolidColorBrush x:Key="PillHover" Color="#2C2C33" />
+    <SolidColorBrush x:Key="InnerBg" Color="#141416" />
+    <SolidColorBrush x:Key="ActiveFill" Color="#26F0C87A" />
+
+    <FontFamily x:Key="IconFont">Segoe MDL2 Assets</FontFamily>
+
+    <!-- Szálcsiszolt sötét ablakháttér: vertikális gradiens + finom hairline-minta -->
+    <DrawingBrush x:Key="HairlineTile" TileMode="Tile"
+                  Viewport="0,0,4,4" ViewportUnits="Absolute"
+                  Viewbox="0,0,4,4" ViewboxUnits="Absolute">
+        <DrawingBrush.Drawing>
+            <GeometryDrawing Brush="#07FFFFFF">
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,4,1" />
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+
+    <LinearGradientBrush x:Key="WindowBg" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#131316" Offset="0" />
+        <GradientStop Color="#0C0C0E" Offset="0.5" />
+        <GradientStop Color="#121214" Offset="1" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="CardBg" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#1E1E22" Offset="0" />
+        <GradientStop Color="#18181B" Offset="1" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="HeroBg" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#232328" Offset="0" />
+        <GradientStop Color="#1A1A1E" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Arany glow (aktív elemek mögé) -->
+    <DropShadowEffect x:Key="GoldGlow" Color="#F0C87A" BlurRadius="14" ShadowDepth="0" Opacity="0.55" />
+    <DropShadowEffect x:Key="GoldGlowSoft" Color="#F0C87A" BlurRadius="22" ShadowDepth="0" Opacity="0.35" />
+
+    <!-- ======================= ALAPOK ======================= -->
+    <Style TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource TextPri}" />
+    </Style>
+
+    <Style TargetType="ToolTip">
+        <Setter Property="Background" Value="#26262B" />
+        <Setter Property="Foreground" Value="{StaticResource TextPri}" />
+        <Setter Property="BorderBrush" Value="{StaticResource PillStroke}" />
+    </Style>
+
+    <!-- IP-mező és társai -->
+    <Style TargetType="TextBox">
+        <Setter Property="Background" Value="{StaticResource InnerBg}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPri}" />
+        <Setter Property="BorderBrush" Value="{StaticResource PillStroke}" />
+        <Setter Property="CaretBrush" Value="{StaticResource Gold}" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1" CornerRadius="9">
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource GoldDim}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ======================= PILL GOMB (alap) ======================= -->
+    <Style TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource PillBg}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPri}" />
+        <Setter Property="BorderBrush" Value="{StaticResource PillStroke}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="12,7" />
+        <Setter Property="Margin" Value="3" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="16" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource PillHover}" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource GoldDim}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#1A1A1E" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Aktív (arany) állapot beállítás-csomagja — triggerekből használjuk -->
+    <!-- (WPF-ben nincs setter-csoport újrahasznosítás; az aktív settereket
+         stílusonként ismételjük, a vizuál egységes.) -->
+
+    <!-- Forrás-csempe: ikon + felirat, aktív arany kerettel/glow-val -->
+    <Style x:Key="SourceTile" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Command"
+                Value="{Binding DataContext.SelectSourceCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+        <Setter Property="CommandParameter" Value="{Binding Token}" />
+        <Setter Property="Width" Value="82" />
+        <Setter Property="Height" Value="66" />
+        <Setter Property="Padding" Value="2" />
+        <Setter Property="Margin" Value="3" />
+        <Setter Property="ContentTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <StackPanel>
+                        <TextBlock Text="{Binding Token, Converter={StaticResource TokenGlyph}}"
+                                   FontFamily="{StaticResource IconFont}" FontSize="20"
+                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                   HorizontalAlignment="Center" Margin="0,2,0,4" />
+                        <TextBlock Text="{Binding Name}" FontSize="10.5" TextAlignment="Center"
+                                   TextWrapping="Wrap" MaxWidth="76"
+                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                   HorizontalAlignment="Center" />
+                    </StackPanel>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Content" Value="{Binding}" />
+        <Style.Triggers>
+            <DataTrigger Value="True">
+                <DataTrigger.Binding>
+                    <MultiBinding Converter="{StaticResource SourceEquals}">
+                        <Binding Path="DataContext.CurrentSourceToken"
+                                 RelativeSource="{RelativeSource AncestorType=Window}" />
+                        <Binding Path="CommandParameter" RelativeSource="{RelativeSource Self}" />
+                    </MultiBinding>
+                </DataTrigger.Binding>
+                <Setter Property="Background" Value="{StaticResource ActiveFill}" />
+                <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Gold}" />
+                <Setter Property="Effect" Value="{StaticResource GoldGlow}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Hangzásmód pill -->
+    <Style x:Key="SoundModeButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Command"
+                Value="{Binding DataContext.SelectSoundModeCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+        <Setter Property="CommandParameter" Value="{Binding Token}" />
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="Padding" Value="8,7" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                <Setter Property="Background" Value="{StaticResource ActiveFill}" />
+                <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Gold}" />
+                <Setter Property="Effect" Value="{StaticResource GoldGlow}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Hangzásmód kategória (kisebb, halványabb) -->
+    <Style x:Key="SoundModeCategoryButton" TargetType="Button" BasedOn="{StaticResource SoundModeButton}">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Padding" Value="6,5" />
+        <Setter Property="Background" Value="#1D1D21" />
+    </Style>
+
+    <!-- Quick Select pill: aktív, ha a vevő MSSMART visszajelzése erre mutat -->
+    <Style x:Key="QuickSelectButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <!-- A parancsot és az aktív állapotot MAGA az elem hordozza. A korábbi
+             `RelativeSource AncestorType=Window` kötés összecsukott kártyában
+             létrejövő gombnál némán üresen maradt → a gomb nem csinált semmit. -->
+        <Setter Property="Command" Value="{Binding SelectCommand}" />
+        <Setter Property="FontSize" Value="11.5" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                <Setter Property="Background" Value="{StaticResource ActiveFill}" />
+                <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Gold}" />
+                <Setter Property="Effect" Value="{StaticResource GoldGlow}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Transport ikon-gomb (kör) -->
+    <Style x:Key="TransportButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{StaticResource GoldDeep}" />
+        <Setter Property="Width" Value="34" />
+        <Setter Property="Height" Value="34" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="3,0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                            CornerRadius="17">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Gold}" />
+                            <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#1A1A1E" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Nagy play/pause (kiemelt transport) -->
+    <Style x:Key="TransportMainButton" TargetType="Button" BasedOn="{StaticResource TransportButton}">
+        <Setter Property="Width" Value="44" />
+        <Setter Property="Height" Value="44" />
+        <Setter Property="FontSize" Value="17" />
+        <Setter Property="Foreground" Value="{StaticResource Gold}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}"
+                            BorderBrush="{StaticResource GoldDim}" BorderThickness="1.4"
+                            CornerRadius="22">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Gold}" />
+                            <Setter TargetName="bd" Property="Effect" Value="{StaticResource GoldGlow}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#1A1A1E" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Nagyobb hangerő-gombok a knob alá -->
+    <Style x:Key="VolPillButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="14,10" />
+        <Setter Property="MinWidth" Value="68" />
+        <Setter Property="Margin" Value="3,4" />
+    </Style>
+
+    <!-- Mute ikon-gomb: némítva arany -->
+    <Style x:Key="MuteIconButton" TargetType="Button" BasedOn="{StaticResource TransportButton}">
+        <Setter Property="Command" Value="{Binding MuteToggleCommand}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsMuted}" Value="True">
+                <Setter Property="Background" Value="{StaticResource ActiveFill}" />
+                <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Gold}" />
+                <Setter Property="Effect" Value="{StaticResource GoldGlow}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Power pill: bekapcsolva az On gomb arany -->
+    <Style x:Key="PowerOnButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Command" Value="{Binding PowerOnCommand}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsPoweredOn}" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Gold}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Hangszóró-preset gombok (EQ-kártya fejlécében) -->
+    <Style x:Key="Preset1Button" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Command" Value="{Binding SelectPresetCommand}" />
+        <Setter Property="FontSize" Value="10.5" />
+        <Setter Property="Padding" Value="8,4" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsPreset1Active}" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Gold}" />
+                <Setter Property="Background" Value="{StaticResource ActiveFill}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Preset2Button" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Command" Value="{Binding SelectPresetCommand}" />
+        <Setter Property="FontSize" Value="10.5" />
+        <Setter Property="Padding" Value="8,4" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsPreset2Active}" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Gold}" />
+                <Setter Property="Background" Value="{StaticResource ActiveFill}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Csatorna-finomhangoló gomb (−/+) -->
+    <Style x:Key="NudgeButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Width" Value="28" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0,2" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="Foreground" Value="{StaticResource TextSec}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                            CornerRadius="14">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Gold}" />
+                            <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Címsor ikon-gombok -->
+    <Style x:Key="TitleBarButton" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource TextSec}" />
+        <Setter Property="Width" Value="34" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#2A2A30" />
+                            <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Pin (mindig felül) ikon-toggle -->
+    <Style x:Key="PinToggle" TargetType="ToggleButton">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource TextSec}" />
+        <Setter Property="Width" Value="34" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource Gold}" />
+                            <Setter TargetName="bd" Property="Background" Value="#26F0C87A" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#2A2A30" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Kártya-fül (összecsukható szekciófejléc, „mappafül") -->
+    <Style x:Key="CardTab" TargetType="ToggleButton">
+        <Setter Property="Foreground" Value="{StaticResource TextSec}" />
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <!-- Zárva: önálló zárt pill; nyitva: a kártyához forrt „mappafül". -->
+                    <Border x:Name="bd" Background="{StaticResource CardBg}"
+                            BorderBrush="{StaticResource CardStroke}" BorderThickness="1"
+                            CornerRadius="9" Padding="12,6,12,5" Margin="10,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="chev" Text="&#xE76C;" FontFamily="{StaticResource IconFont}"
+                                       FontSize="8" VerticalAlignment="Center" Margin="0,1,7,0"
+                                       Foreground="{StaticResource GoldDeep}" />
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="chev" Property="Text" Value="&#xE70D;" />
+                            <Setter TargetName="bd" Property="CornerRadius" Value="9,9,0,0" />
+                            <Setter TargetName="bd" Property="BorderThickness" Value="1,1,1,0" />
+                            <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Kártya-test -->
+    <Style x:Key="CardBody" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource CardBg}" />
+        <Setter Property="BorderBrush" Value="{StaticResource CardStroke}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="0,10,10,10" />
+        <Setter Property="Padding" Value="10" />
+    </Style>
+
+    <!-- ======================= CSÚSZKÁK ======================= -->
+
+    <!-- Arany knob-csúszka (mini nézet hangerő) -->
+    <Style x:Key="KnobSlider" TargetType="Slider">
+        <Setter Property="Height" Value="34" />
+        <Setter Property="IsMoveToPointEnabled" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid>
+                        <Border Height="4" CornerRadius="2" Background="#33000000"
+                                BorderBrush="#22FFFFFF" BorderThickness="0,0,0,1"
+                                VerticalAlignment="Center" Margin="14,0" />
+                        <Track x:Name="PART_Track">
+                            <!-- IsHitTestVisible=False: a 0-opacitású RepeatButtonok
+                                 különben elkapják az első kattintást a move-to-point elől,
+                                 és a thumb csak a másodikra ugrik a kattintás helyére. -->
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="Slider.DecreaseLarge" Opacity="0"
+                                              Focusable="False" IsHitTestVisible="False" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="Slider.IncreaseLarge" Opacity="0"
+                                              Focusable="False" IsHitTestVisible="False" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Width="20" Height="26" CornerRadius="10"
+                                                    Background="#2A2A2F" BorderBrush="{StaticResource GoldDeep}"
+                                                    BorderThickness="1.2">
+                                                <Border Width="3" Height="13" Background="{StaticResource Gold}"
+                                                        CornerRadius="1.5" />
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Függőleges EQ-fader -->
+    <Style x:Key="VFader" TargetType="Slider">
+        <Setter Property="Orientation" Value="Vertical" />
+        <Setter Property="Width" Value="30" />
+        <Setter Property="IsMoveToPointEnabled" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid>
+                        <!-- vájat -->
+                        <Border Width="4" CornerRadius="2" Background="#0F0F11"
+                                BorderBrush="#26FFFFFF" BorderThickness="0,0,1,0"
+                                HorizontalAlignment="Center" Margin="0,8" />
+                        <!-- 0 dB középjel -->
+                        <Border Height="1" Background="#33F0C87A" VerticalAlignment="Center"
+                                HorizontalAlignment="Center" Width="16" />
+                        <Track x:Name="PART_Track">
+                            <!-- IsHitTestVisible=False: a 0-opacitású RepeatButtonok
+                                 különben elkapják az első kattintást a move-to-point elől,
+                                 és a thumb csak a másodikra ugrik a kattintás helyére. -->
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="Slider.DecreaseLarge" Opacity="0"
+                                              Focusable="False" IsHitTestVisible="False" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="Slider.IncreaseLarge" Opacity="0"
+                                              Focusable="False" IsHitTestVisible="False" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Width="22" Height="15" CornerRadius="5"
+                                                    Background="#2E2E33" BorderBrush="{StaticResource GoldDeep}"
+                                                    BorderThickness="1">
+                                                <Border Height="2.4" Width="12" Background="{StaticResource Gold}"
+                                                        CornerRadius="1.2" />
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Vékony, sötét görgetősáv -->
+    <Style TargetType="ScrollBar">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Width" Value="8" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid Background="Transparent">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="#3A3A42" CornerRadius="4" Margin="1" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Width" Value="Auto" />
+                <Setter Property="Height" Value="8" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ======================= VEVŐ-BEÁLLÍTÁSOK (AvOption / AvLevel) ======================= -->
+
+    <!-- Egy választható érték. A parancsot maga a választás hordozza (AvChoice.SelectCommand),
+         ezért ez a stílus – a forrás/hangzásmód pillekkel ellentétben – nem hivatkozik
+         az ablak DataContext-jére, és bármelyik ablakban működik. -->
+    <Style x:Key="OptionPill" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Command" Value="{Binding SelectCommand}" />
+        <Setter Property="Content" Value="{Binding Label}" />
+        <Setter Property="FontSize" Value="10.5" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="Margin" Value="0,2,4,2" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                <Setter Property="Background" Value="{StaticResource ActiveFill}" />
+                <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Gold}" />
+                <Setter Property="Effect" Value="{StaticResource GoldGlow}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Egy beállítás-sor: felirat + pillek. Ha a vevő az adott forrás/hangzásmód
+         mellett nem ismeri a beállítást (IsAvailable=false), a sor eltűnik. -->
+    <DataTemplate x:Key="AvOptionRow">
+        <Grid Margin="0,1" Visibility="{Binding IsRowVisible, Converter={StaticResource BoolVis}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="126" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="11"
+                       Foreground="{StaticResource TextSec}" VerticalAlignment="Center"
+                       TextWrapping="Wrap" Margin="2,0,8,0" />
+            <ItemsControl Grid.Column="1" ItemsSource="{Binding Choices}"
+                          IsEnabled="{Binding IsEnabled}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Style="{StaticResource OptionPill}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+    </DataTemplate>
+
+    <!-- Numerikus beállítás-sor: felirat + [−] érték [+] -->
+    <DataTemplate x:Key="AvLevelRow">
+        <Grid Margin="0,1" Visibility="{Binding IsRowVisible, Converter={StaticResource BoolVis}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="126" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="11"
+                       Foreground="{StaticResource TextSec}" VerticalAlignment="Center"
+                       TextWrapping="Wrap" Margin="2,0,8,0" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" IsEnabled="{Binding IsEnabled}">
+                <Button Style="{StaticResource NudgeButton}" Content="−" Command="{Binding DownCommand}" />
+                <TextBlock Text="{Binding Text}" FontSize="12.5" FontWeight="SemiBold"
+                           Foreground="{StaticResource Gold}" VerticalAlignment="Center"
+                           MinWidth="62" TextAlignment="Center" />
+                <Button Style="{StaticResource NudgeButton}" Content="+" Command="{Binding UpCommand}" />
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
+    <!-- Beállítások ablak fülei -->
+    <Style x:Key="SettingsTabs" TargetType="TabControl">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0,8,0,0" />
+    </Style>
+
+    <Style x:Key="SettingsTab" TargetType="TabItem">
+        <Setter Property="Foreground" Value="{StaticResource TextSec}" />
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Border x:Name="bd" Background="{StaticResource PillBg}"
+                            BorderBrush="{StaticResource PillStroke}" BorderThickness="1"
+                            CornerRadius="14" Padding="14,6" Margin="0,0,6,0">
+                        <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource ActiveFill}" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Gold}" />
+                            <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Kapcsolható transport-ikon (keverés, ismétlés). Az aktív állapotot a Tag
+         hordozza, így egyetlen stílus szolgál ki több, más-más property-re kötött gombot. -->
+    <Style x:Key="TransportToggleButton" TargetType="Button" BasedOn="{StaticResource TransportButton}">
+        <Setter Property="Width" Value="30" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{StaticResource TextDim}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource GoldPale}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Gold}" />
+                <Setter Property="Background" Value="{StaticResource ActiveFill}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Alcím a beállítás-csoportok fölé -->
+    <Style x:Key="SettingsGroupTitle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource GoldDeep}" />
+        <Setter Property="FontSize" Value="10.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="2,10,0,4" />
+    </Style>
+
+</ResourceDictionary>
