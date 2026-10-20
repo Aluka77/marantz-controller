@@ -37,7 +37,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Static intro + the commit subjects since the previous tag, so every
+          # release says what actually changed without hand-written notes.
+          $notes = Get-Content .github/release-notes.md -Raw
+          $prev = git describe --tags --abbrev=0 "${{ github.ref_name }}^" 2>$null
+          if ($prev) {
+            $log = git log --no-merges --format='- %s' "$prev..${{ github.ref_name }}"
+            if ($log) { $notes += "`n`n## Changes since $prev`n`n" + ($log -join "`n") }
+          }
+          Set-Content release-body.md $notes -Encoding utf8
           gh release create "${{ github.ref_name }}" `
             "MarantzController-${{ github.ref_name }}-win-x64.exe" `
             --title "Marantz Controller ${{ github.ref_name }}" `
-            --notes-file .github/release-notes.md
+            --notes-file release-body.md
