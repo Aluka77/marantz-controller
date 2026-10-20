@@ -13,6 +13,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # A sekély klónban nincsenek tagek, így a `git describe` nem találja az
+          # előző kiadást, és a jegyzetből némán kimarad a változáslista.
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v4
         with:
