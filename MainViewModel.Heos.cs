@@ -22,6 +22,21 @@ public sealed partial class MainViewModel
                 OnPropertyChanged(nameof(IsRepeatActive));
                 OnPropertyChanged(nameof(IsShuffleActive));
                 OnPropertyChanged(nameof(RepeatToolTip));
+
+                // Ez a VALÓDI állapot (a set_play_mode nyugtája nem az). Ha mást kértünk,
+                // mint ami lett, a vevő elnyelte a parancsot – ezt meg kell mondani.
+                if (_pendingPlayMode is { } want &&
+                    (want.Repeat != _repeatMode || want.Shuffle != _shuffleOn))
+                {
+                    PlayModeNote = IsStationPlayback
+                        ? "Repeat and shuffle belong to the app that is streaming, not the receiver."
+                        : "The receiver did not accept the repeat/shuffle change.";
+                }
+                else if (_pendingPlayMode is not null)
+                {
+                    PlayModeNote = "";
+                }
+                _pendingPlayMode = null;
             });
 
         _heos.QueueReceived += items =>
@@ -47,24 +62,84 @@ public sealed partial class MainViewModel
     public string RepeatGlyph =>
         char.ConvertFromUtf32(_repeatMode == "on_one" ? 0xE8ED : 0xE8EE);
 
-    public string RepeatToolTip => _repeatMode switch
+    public string RepeatToolTip => IsStationPlayback
+        ? "Repeat — set it in the app that is streaming (Spotify Connect / radio)"
+        : _repeatMode switch
+        {
+            "on_all" => "Repeat: all",
+            "on_one" => "Repeat: one",
+            _ => "Repeat: off",
+        };
+
+    public string ShuffleToolTip => IsStationPlayback
+        ? "Shuffle — set it in the app that is streaming (Spotify Connect / radio)"
+        : "Shuffle";
+
+    /// <summary>A vevő a sorból (type="song") lejátszott zenénél fogadja csak el az
+    /// ismétlést/keverést. Spotify Connect-nél és rádiónál a küldő app dönt – a vevő
+    /// ilyenkor "success"-t hazudik, de nem csinál semmit (élőben mérve).</summary>
+    public bool IsPlayModeAvailable => !IsStationPlayback;
+
+    private string _playModeNote = "";
+
+    /// <summary>Rövid magyarázat, ha a vevő elnyelte a kért módot; különben üres.</summary>
+    public string PlayModeNote
     {
-        "on_all" => "Repeat: all",
-        "on_one" => "Repeat: one",
-        _ => "Repeat: off",
-    };
+        get => _playModeNote;
+        private set
+        {
+            if (Set(ref _playModeNote, value))
+                OnPropertyChanged(nameof(HasPlayModeNote));
+        }
+    }
+
+    public bool HasPlayModeNote => _playModeNote.Length > 0;
+
+    /// <summary>Amit legutóbb KÉRTÜNK. A visszaolvasott állapottal összevetve derül ki,
+    /// hogy a vevő tényleg végrehajtotta-e.</summary>
+    private (string Repeat, bool Shuffle)? _pendingPlayMode;
 
     public ICommand ToggleRepeatCommand => _toggleRepeat ??= new RelayCommand(() =>
     {
         // Körbe: ki → összes → egy → ki
         var next = _repeatMode switch { "off" => "on_all", "on_all" => "on_one", _ => "off" };
+        _pendingPlayMode = (next, _shuffleOn);
         _ = _heos.SetPlayModeAsync(next, _shuffleOn ? "on" : "off");
     });
     private RelayCommand? _toggleRepeat;
 
     public ICommand ToggleShuffleCommand => _toggleShuffle ??= new RelayCommand(() =>
-        _ = _heos.SetPlayModeAsync(_repeatMode, _shuffleOn ? "off" : "on"));
+    {
+        _pendingPlayMode = (_repeatMode, !_shuffleOn);
+        _ = _heos.SetPlayModeAsync(_repeatMode, _shuffleOn ? "off" : "on");
+    });
     private RelayCommand? _toggleShuffle;
+
+    // ---- Spotify Connect / rádió felismerése ----
+
+    private bool _isStationPlayback;
+
+    /// <summary>true, ha a HEOS "station" típust jelent: rádió vagy Spotify Connect.
+    /// Ilyenkor a lejátszási sor, az ismétlés és a keverés NEM a vevőé – a vevő saját
+    /// sora ilyenkor egy korábbi, független lista marad (élőben mérve).</summary>
+    public bool IsStationPlayback
+    {
+        get => _isStationPlayback;
+        private set
+        {
+            if (!Set(ref _isStationPlayback, value))
+                return;
+            OnPropertyChanged(nameof(QueueHint));
+            OnPropertyChanged(nameof(IsPlayModeAvailable));
+            OnPropertyChanged(nameof(RepeatToolTip));
+            OnPropertyChanged(nameof(ShuffleToolTip));
+            PlayModeNote = "";      // forrásváltáskor a régi magyarázat már nem érvényes
+        }
+    }
+
+    public string QueueHint => IsStationPlayback
+        ? "Streaming from an app — this is the receiver's own queue, not what is playing now."
+        : "";
 
     // ---- Lejátszási sor ----
 

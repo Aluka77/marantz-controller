@@ -190,23 +190,34 @@
 
                                     <Border Width="1" Background="{StaticResource CardStroke}" Margin="6,6" />
 
+                                    <!-- Spotify Connect / rádió alatt a vevő nem fogadja el ezeket
+                                         (élőben mérve: "success", de nem történik semmi) → letiltva. -->
                                     <Button Style="{StaticResource TransportToggleButton}" Content="&#xE8B1;"
                                             Tag="{Binding IsShuffleActive}" Command="{Binding ToggleShuffleCommand}"
-                                            ToolTip="Shuffle" />
+                                            IsEnabled="{Binding IsPlayModeAvailable}"
+                                            ToolTip="{Binding ShuffleToolTip}" AutomationProperties.Name="Shuffle" />
                                     <Button Style="{StaticResource TransportToggleButton}"
                                             Content="{Binding RepeatGlyph}" Tag="{Binding IsRepeatActive}"
                                             Command="{Binding ToggleRepeatCommand}"
-                                            ToolTip="{Binding RepeatToolTip}" />
+                                            IsEnabled="{Binding IsPlayModeAvailable}"
+                                            ToolTip="{Binding RepeatToolTip}" AutomationProperties.Name="Repeat" />
 
                                     <!-- Lejátszási sor: a lista csak nyitáskor töltődik le -->
                                     <Button x:Name="QueueButton" Style="{StaticResource TransportToggleButton}"
                                             Content="&#xE8FD;" Tag="{Binding IsQueueOpen}"
-                                            Command="{Binding ToggleQueueCommand}" ToolTip="Play queue" />
+                                            Command="{Binding ToggleQueueCommand}" ToolTip="Play queue"
+                                            AutomationProperties.Name="Play queue" />
                                     <Popup IsOpen="{Binding IsQueueOpen, Mode=TwoWay}" PlacementTarget="{Binding ElementName=QueueButton}"
                                            Placement="Bottom" StaysOpen="False" AllowsTransparency="True"
                                            HorizontalOffset="-160" VerticalOffset="4">
                                         <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource PillStroke}"
                                                 BorderThickness="1" CornerRadius="10" Padding="6" MaxHeight="320" Width="320">
+                                          <DockPanel>
+                                            <!-- Spotify Connect / rádió: a vevő sora NEM az, ami szól -->
+                                            <TextBlock DockPanel.Dock="Top" Text="{Binding QueueHint}" FontSize="10"
+                                                       TextWrapping="Wrap" Margin="6,2,6,6"
+                                                       Foreground="{StaticResource TextDim}"
+                                                       Visibility="{Binding IsStationPlayback, Converter={StaticResource BoolVis}}" />
                                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                                 <ItemsControl ItemsSource="{Binding Queue}">
                                                     <ItemsControl.ItemTemplate>
@@ -220,9 +231,15 @@
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
                                             </ScrollViewer>
+                                          </DockPanel>
                                         </Border>
                                     </Popup>
                                 </StackPanel>
+
+                                <!-- Miért nem történt semmi: a vevő elnyelte a kért módot -->
+                                <TextBlock Text="{Binding PlayModeNote}" FontSize="10" TextWrapping="Wrap"
+                                           Foreground="{StaticResource TextDim}" Margin="1,5,4,0"
+                                           Visibility="{Binding HasPlayModeNote, Converter={StaticResource BoolVis}}" />
                             </StackPanel>
 
                             <!-- Knob + Vol gombok -->

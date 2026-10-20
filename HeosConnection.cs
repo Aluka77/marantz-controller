@@ -98,6 +98,14 @@ public sealed class HeosConnection
             ? SendRawAsync($"heos://player/set_play_mode?pid={pid}&repeat={repeat}&shuffle={shuffle}")
             : Task.CompletedTask;
 
+    /// <summary>Rövid várakozás után visszaolvassa a tényleges lejátszási módot
+    /// (a vevőnek kell egy pillanat, mire a set_play_mode átmegy – vagy elvérzik).</summary>
+    private async Task VerifyPlayModeAsync()
+    {
+        await Task.Delay(400).ConfigureAwait(false);
+        await RefreshPlayModeAsync().ConfigureAwait(false);
+    }
+
     public Task RefreshPlayModeAsync() =>
         _pid is long pid ? SendRawAsync($"heos://player/get_play_mode?pid={pid}") : Task.CompletedTask;
 
@@ -208,8 +216,15 @@ public sealed class HeosConnection
                     break;
 
                 case "player/get_play_mode":
-                case "player/set_play_mode":
                     PlayModeChanged?.Invoke(ParseField(message, "repeat"), ParseField(message, "shuffle"));
+                    break;
+
+                // A set_play_mode válasza NEM bizonyíték: a vevő "success"-t ad és
+                // visszaecho-zza a kért értéket akkor is, ha nem alkalmazza (élőben
+                // mérve Spotify Connect / station lejátszásnál: a get_play_mode utána
+                // is "off"). Ezért a nyugtát eldobjuk, és a VALÓDI állapotot kérdezzük.
+                case "player/set_play_mode":
+                    _ = VerifyPlayModeAsync();
                     break;
 
                 case "player/get_queue":
@@ -274,14 +289,16 @@ public sealed class HeosConnection
     }
 }
 
-/// <summary>Now-playing média a HEOS-ból.</summary>
-public sealed record NowPlaying(string Song, string Artist, string Album, string ImageUrl)
+/// <summary>Now-playing média a HEOS-ból. A <paramref name="Type"/> "song" (a vevő
+/// saját sorából megy) vagy "station" (rádió ill. Spotify Connect – ilyenkor a sor,
+/// az ismétlés és a keverés NEM a vevőé, hanem a küldő alkalmazásé).</summary>
+public sealed record NowPlaying(string Song, string Artist, string Album, string ImageUrl, string Type)
 {
     public static NowPlaying FromPayload(JsonElement p)
     {
         string Get(string name) =>
             p.TryGetProperty(name, out var el) && el.ValueKind == JsonValueKind.String ? el.GetString() ?? "" : "";
-        return new NowPlaying(Get("song"), Get("artist"), Get("album"), Get("image_url"));
+        return new NowPlaying(Get("song"), Get("artist"), Get("album"), Get("image_url"), Get("type"));
     }
 }
 

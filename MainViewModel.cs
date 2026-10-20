@@ -1529,6 +1529,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         NowPlayingTitle = np?.Song ?? "";
         NowPlayingArtist = np?.Artist ?? "";
         NowPlayingImageUrl = np?.ImageUrl ?? "";
+        IsStationPlayback = string.Equals(np?.Type, "station", StringComparison.Ordinal);
     }
 
     private bool _isPlaying;
